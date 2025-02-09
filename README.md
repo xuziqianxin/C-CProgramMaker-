@@ -115,6 +115,22 @@ in.c -inc <stdio.h> <string.h> "main.h"
 
 不能打断连续的文本哦~，这样搞 main.c 就会呗分割为 ma 和 in.c 了！
 
+cpm现在还支持混编Makefile和CMakeLists，混编的方式非常简单格式如下：
+
+```
+Makefile		#编写makefile
+xxxxxx
+xxxxxx
+end
+
+CMakeLists		#编写CMakeLists
+xxxxxx
+xxxxxx
+end
+```
+
+没有功能是完美的，所以请注意一个问题，在混编之前必须保证文件已经创建，为了避免产生意外的错误，在没检测到文件创建的时候是不会处理的。end作为文件的结尾，当然你愿意也可以大写为END。目前仅支持单个创建，本身这个创建器就是针对单个工程设计的，所以你想在不同的文件夹创建不同的Makefile或者CMake恐怕有点困难。不过值得一提的是也不是完全的不可能，因为文件的路径是在创建文件的时候检测，所以可以使用crt指令来创建新的文件，又因为文件是顺序执行的所以可以使用这种方式来创建不同的Makefile和CMakeLists不过我并未测试这种，所以可能会引发BUG。
+
 cpm以上就是cpm的所有内容了。
 
 ### 指令：crt

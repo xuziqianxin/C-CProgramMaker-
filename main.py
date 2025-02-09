@@ -6,17 +6,22 @@ import os
 import shutil
 
 instructionList = ["yl", "cd", "crt", "cpy", "del", "help"]
-keyWord = ["-f", "-inc", "var", "define"]
+keyWord = ["-f", "-inc", "var", "define", "Makefile", "CMakeLists.txt", "end"]
 programFolderPath = ''
 filenameExtension = ''
 fileCrtMode = 0
 includeHead = "#include "
 fileHeadList = []
 variableList = {}
+MakefilePath = ''
+CMakeListsPath = ''
 
 
 def instruction_yl(instruction):
     global variableList
+    is_write_file = False
+    is_makefile = False
+    is_cmake = False
     temp = []
 
     if os.path.isfile(instruction[1]):
@@ -24,6 +29,23 @@ def instruction_yl(instruction):
         if program_make_file_extension == ".cpm":
             program_make_file = open(instruction[1], "r", encoding="UTF-8")
             for line in program_make_file:
+                if is_write_file:
+                    if ((line.strip() == "end") or (line.strip() == "END")) and is_makefile:
+                        is_makefile = False
+                        is_write_file = False
+                    elif ((line.strip() == "end") or (line.strip() == "END")) and is_cmake:
+                        is_cmake = False
+                        is_write_file = False
+
+                    if is_makefile and os.path.exists(MakefilePath):
+                        makefile = open(MakefilePath, "a")
+                        makefile.writelines(line)
+                        makefile.close()
+                    elif is_cmake and os.path.exists(CMakeListsPath):
+                        cmake = open(CMakeListsPath, "a")
+                        cmake.writelines(line)
+                        cmake.close()
+                    continue
                 line = line.strip()
 
                 if not line:
@@ -51,37 +73,47 @@ def instruction_yl(instruction):
                     instruction = list(filter(None, instruction))
                     temp = []
 
-                if instruction[0] == "var" and instruction[2] == "=":
-                    variableList[instruction[1]] = instruction[3].replace("_", " ").replace("\"", " ").strip()
-                    continue
-                elif instruction[0] == "define":
-                    variableList[instruction[1]] = instruction[2].replace("_", " ")
-                    continue
-                elif instruction[0] != "var" and instruction[1] == "=":
-                    if variableList.get(instruction[0]):
-                        variableList[instruction[0]] = instruction[2].replace("_", " ").replace("\"", " ").strip()
+                if len(instruction) != 1:
+                    if instruction[0] == "var" and instruction[2] == "=":
+                        variableList[instruction[1]] = instruction[3].replace("_", " ").replace("\"", " ").strip()
                         continue
-                    else:
+                    elif instruction[0] == "define":
+                        variableList[instruction[1]] = instruction[2].replace("_", " ")
                         continue
-                else:
-                    pass
-
-                for index, token in enumerate(instruction):
-                    if token.find("$") != -1:
-                        variable_temp = list(filter(None, token.split("$")))
-                        if token.find("$") == 0:
-                            variable_name = variable_temp[0]
-                            variable_index = 0
-                        elif token.find("$") == len(token):
-                            variable_name = variable_temp[2]
-                            variable_index = 2
+                    elif instruction[0] != "var" and instruction[1] == "=":
+                        if variableList.get(instruction[0]):
+                            variableList[instruction[0]] = instruction[2].replace("_", " ").replace("\"", " ").strip()
+                            continue
                         else:
-                            variable_name = variable_temp[1]
-                            variable_index = 1
-                        if variableList.get(variable_name):
-                            variable_temp[variable_index] = variableList.get(variable_name)
-                            instruction[index] = "".join(variable_temp)
-                print(instruction)
+                            continue
+                    else:
+                        pass
+
+                    for index, token in enumerate(instruction):
+                        if token.find("$") != -1:
+                            variable_temp = list(filter(None, token.split("$")))
+                            if token.find("$") == 0:
+                                variable_name = variable_temp[0]
+                                variable_index = 0
+                            elif token.find("$") == len(token):
+                                variable_name = variable_temp[2]
+                                variable_index = 2
+                            else:
+                                variable_name = variable_temp[1]
+                                variable_index = 1
+                            if variableList.get(variable_name):
+                                variable_temp[variable_index] = variableList.get(variable_name)
+                                instruction[index] = "".join(variable_temp)
+
+                if (line == "Makefile") and (not is_makefile):
+                    is_makefile = True
+                    is_write_file = True
+                    continue
+                elif (line == "CMakeLists") and (not is_cmake):
+                    is_cmake = True
+                    is_write_file = True
+                    continue
+
                 if instruction[0] == instructionList[0]:
                     print("E:文件禁止使用yl")
                 elif instruction[0] == instructionList[1]:
@@ -114,6 +146,8 @@ def instruction_cd(instruction):
 
 
 def instruction_crt(instruction):
+    global MakefilePath
+    global CMakeListsPath
     global programFolderPath
     global fileCrtMode
     global filenameExtension
@@ -199,6 +233,10 @@ def instruction_crt(instruction):
                     open(fileName + filenameExtension, "w", encoding='utf-8').close()
 
             elif not os.path.exists(fileName):
+                if fileName == "Makefile":
+                    MakefilePath = os.path.join(os.getcwd(), fileName)
+                elif fileName == "CMakeLists.txt":
+                    CMakeListsPath = os.path.join(os.getcwd(), fileName)
                 open(fileName, "w").close()
 
         os.chdir(programFolderPath)
